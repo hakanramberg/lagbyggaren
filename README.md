@@ -4,7 +4,7 @@ Fristående handbollsapp för trupp, jämna eller nivåanpassade lag och gemensa
 
 ## Gemensam Cloudflare-version
 
-Workers Free och D1 Free används. Zero Trust behövs inte: `AUTH_MODE=links` ger personliga tränarlänkar utan konto eller e-postkod. Alla med en giltig tränarlänk kan läsa och redigera truppen, inklusive nivåerna. Länkarna ska hållas inom tränargruppen. En länk identifierar tränaren vid omröstning men verifierar inte personens identitet.
+Cloudflare Pages med Functions på Workers Free och D1 Free används. Zero Trust behövs inte: `AUTH_MODE=links` ger personliga tränarlänkar utan konto eller e-postkod. Alla med en giltig tränarlänk kan läsa och redigera truppen, inklusive nivåerna. Länkarna ska hållas inom tränargruppen. En länk identifierar tränaren vid omröstning men verifierar inte personens identitet.
 
 Huvudtränaren skapar en personlig länk för varje kollega under Tränare. Där kan åtkomst också återkallas. Alla inbjudna tränare måste godkänna den aktuella versionen före acceptans. En revidering nollställer rösterna; accepterade lag behåller sina ursprungliga spelaruppgifter.
 
@@ -12,7 +12,7 @@ GitHub Pages fungerar fortfarande med lokal webbläsarlagring. GitHub innehålle
 
 ## Publicering
 
-Node 24 och pnpm används. Installera med `pnpm install --frozen-lockfile`. Cloudflares befintliga GitHub-koppling bygger huvudgrenen med `pnpm exec wrangler deploy`. Förhandsvisningsadresser och byggen från andra grenar ska vara avstängda. Kontot ska förbli Workers Free; ingen betald plan behövs.
+Node 24 och pnpm används. Installera med `pnpm install --frozen-lockfile`. Cloudflare Pages använder den befintliga GitHub-kopplingen med byggkommandot `node scripts/build-pages.mjs` och utdatakatalog `.worker-assets`. Ingen separat byggnyckel krävs. Byggen från andra grenar ska vara avstängda. Preview-miljön saknar databasbindning. Kontot ska förbli Workers Free; ingen betald plan behövs.
 
 D1-bindningen finns i wrangler.jsonc. Skapa tabellen med migrations/0001_workspace.sql innan första användningen. Ange OWNER_EMAIL och valfritt OWNER_NAME som Cloudflare-inställningar. Skapa 32 kryptografiskt slumpmässiga byte som hexadecimal ägarnyckel. Lägg endast dess SHA-256-hash i Cloudflare som OWNER_TOKEN_HASH. Huvudtränarens länk är appens adress med `/#key=<ägarnyckel>`. Spara aldrig nyckeln i GitHub. Appen tar bort nyckeln från adressfältet efter öppning och sparar den i webbläsaren.
 
@@ -30,6 +30,6 @@ Synkronisering sker var 30:e sekund och pausas i dolda flikar eller efter fem mi
 
 Kontogränser gäller även andra appar på samma konto. Se https://developers.cloudflare.com/workers/platform/pricing/ och https://developers.cloudflare.com/d1/platform/pricing/.
 
-Kör `node --test test.cjs cloudflare/test.mjs` för lagfördelning, historik, samtidighet, inbjudningar, nekad och återkallad åtkomst, röster och import. `pnpm exec wrangler deploy --dry-run` kontrollerar publiceringsbygget. `pnpm run preview` startar den tidigare lokala servern.
+Kör `node --test test.cjs cloudflare/test.mjs` för lagfördelning, historik, samtidighet, inbjudningar, nekad och återkallad åtkomst, röster och import. `node scripts/build-pages.mjs` kontrollerar publiceringsbygget. `pnpm run preview` startar den tidigare lokala servern.
 
 Algoritmen är heuristisk: full positionstäckning, exakt målnivå och nya lagkamrater beror på tillgänglig trupp.

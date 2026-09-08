@@ -10,15 +10,16 @@
     "start": "node server.cjs",
     "test": "node --test test.cjs cloudflare/test.mjs",
     "preview": "node preview.cjs",
-    "build:cloudflare": "node scripts/build-cloudflare.mjs",
+    "build:cloudflare": "node scripts/build-pages.mjs",
     "test:cloudflare": "node --test cloudflare/test.mjs",
-    "deploy:cloudflare": "wrangler deploy",
+    "deploy:cloudflare": "wrangler pages deploy .worker-assets",
     "db:cloudflare": "wrangler d1 migrations apply lagbyggaren --remote"
   },
   "dependencies": {
     "jose": "^6.2.12"
   },
   "devDependencies": {
+    "esbuild": "0.28.1",
     "wrangler": "^4.129.0"
   },
   "packageManager": "pnpm@11.19.0"

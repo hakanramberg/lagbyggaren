@@ -12,6 +12,9 @@ importers:
         specifier: ^6.2.12
         version: 6.2.12
     devDependencies:
+      esbuild:
+        specifier: 0.28.1
+        version: 0.28.1
       wrangler:
         specifier: ^4.129.0
         version: 4.129.0
