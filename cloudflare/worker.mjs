@@ -55,7 +55,7 @@ export function createHandler(verify = verifyIdentity) {
         }
         const data = await load(env, email, linkHash);
         const actor = links ? data.tokens?.[linkHash] : data.state.coaches.find(c => c.email === email)?.id;
-        if (!actor) throw new ApiError(403, 'Din e-postadress har inte bjudits in av huvudtränaren.');
+        if (!actor) throw new ApiError(403, links ? 'Tränarlänken är ogiltig eller har återkallats. Be huvudtränaren om en ny länk.' : 'Din e-postadress har inte bjudits in av huvudtränaren.');
         if (request.method === 'GET' && url.pathname === '/api/state') return json(envelope(data, actor));
         if (request.method !== 'POST') throw new ApiError(405, 'Metoden stöds inte.');
         const body = await readBody(request);

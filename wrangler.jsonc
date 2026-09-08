@@ -3,7 +3,7 @@
   "name": "lagbyggaren",
   "compatibility_date": "2026-09-08",
   "pages_build_output_dir": ".worker-assets",
-  "vars": { "AUTH_MODE": "links" },
+  "vars": { "AUTH_MODE": "links", "NODE_VERSION": "24.19.0" },
   "d1_databases": [{ "binding": "DB", "database_name": "lagbyggaren", "database_id": "a081dd05-8320-4f5f-8124-c53204c5b1a8", "migrations_dir": "migrations" }],
   "env": { "preview": { "vars": { "AUTH_MODE": "links" }, "d1_databases": [] } }
 }
