@@ -1,0 +1,30 @@
+# Choose this Blueprint path when importing the existing repository into Render.
+# This creates a paid service and persistent disk. Review Render's quote before applying.
+services:
+  - type: web
+    name: ankaret-lagbyggaren
+    runtime: node
+    plan: 0.5c-512mb
+    region: frankfurt
+    buildCommand: node --check server.cjs
+    startCommand: node server.cjs
+    healthCheckPath: /health
+    numInstances: 1
+    autoDeployTrigger: off
+    disk:
+      name: lagbyggaren-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /var/data
+      - key: OWNER_NAME
+        value: Huvudtränare
+      - key: OWNER_TOKEN
+        generateValue: true
