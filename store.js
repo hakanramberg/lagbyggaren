@@ -69,6 +69,6 @@
     next.version++;
     return next;
   }
-  root.TeamStore = { POSITIONS, levels, validPlayer, validatePlayers, initial, apply };
+  root.TeamStore = { POSITIONS, levels, validPlayer, validatePlayers, proposalData, initial, apply };
   if (typeof module !== 'undefined') module.exports = root.TeamStore;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -3,3 +3,9 @@
 .test-*/
 node_modules/
 *.log
+.wrangler/
+.worker-assets/
+.dev.vars*
+.env*
+wrangler.local.jsonc
+.test-*

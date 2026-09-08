@@ -3,6 +3,7 @@ const $ = s => document.querySelector(s);
 const { POSITIONS, levels } = TeamStore;
 const LOCAL_KEY = 'ankaret-lagbyggaren-v2';
 const shared = window.LAGBYGGAREN_CONFIG?.shared === true;
+const accessAuth = window.LAGBYGGAREN_CONFIG?.auth === 'access';
 let state = TeamStore.initial(), me = 'local', owner = true, token = '', draft = null, reviewId = null, busy = false, timer;
 let selected = new Set(), selectionKnown = new Set();
 let editorPrevious = null;
@@ -27,9 +28,10 @@ function acceptEnvelope(data) {
   render();
 }
 async function api(path, body) {
-  const response = await fetch('/api/' + path, { method: body ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + token, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify({ ...body, version: state.version }) } : {}), signal: AbortSignal.timeout(12000) });
+  const response = await fetch('/api/' + path, { method: body ? 'POST' : 'GET', headers: { ...(!accessAuth ? { Authorization: 'Bearer ' + token } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify({ ...body, version: state.version }) } : {}), signal: AbortSignal.timeout(12000) });
+  if (!response.headers.get('content-type')?.includes('application/json')) { $('#login').hidden = false; $('#appcontent').hidden = true; throw new Error('Inloggningen behöver förnyas. Välj Logga in igen.'); }
   const data = await response.json();
-  if (response.status === 401) { $('#login').hidden = false; $('#appcontent').hidden = true; $('#connection').textContent = 'Logga in med din personliga tränarlänk.'; }
+  if (response.status === 401 || response.status === 403) { $('#login').hidden = false; $('#appcontent').hidden = true; $('#connection').textContent = accessAuth ? 'Logga in med din godkända e-postadress.' : 'Logga in med din personliga tränarlänk.'; }
   if (!response.ok) { if (data.state) acceptEnvelope(data); throw new Error(data.error || 'Kunde inte hämta uppgifterna.'); }
   return data;
 }
@@ -169,7 +171,7 @@ function showReview(id, refresh = false) {
   const previousComment = refresh ? $('#votecomment')?.value : null;
   reviewId = id; $('#reviewtitle').textContent = p.name; $('#reviewdialog').dataset.teams = p.teams.length;
   const accepted = p.status === 'accepted', approved = state.coaches.every(c => p.votes[c.id]?.choice === 'approve');
-  $('#reviewdetail').innerHTML = `<p class="${accepted ? 'success' : 'hint'}">${accepted ? 'Accepterat och sparat · ' + new Date(p.acceptedAt).toLocaleDateString('sv-SE') : 'Version ' + p.revision + ' · Rösterna gäller bara denna version.'}</p><p class="hint compare-hint">Bläddra i sidled för att jämföra alla lag.</p>${teamsHTML(p)}<h3 class="sub">TRÄNARNAS BEDÖMNING</h3><ul class="votes">${(p.reviewers || state.coaches).map(c => { const vote = p.votes[c.id]; return `<li><b>${esc(c.name)}${c.id === me ? ' (du)' : ''}</b> · ${vote?.choice === 'approve' ? 'Godkänner' : vote?.choice === 'adjust' ? 'Önskar justering' : accepted ? 'Ingick inte i beslutet' : 'Inväntar svar'}${vote?.comment ? '<p>' + esc(vote.comment) + '</p>' : ''}</li>`; }).join('')}</ul>${accepted ? '' : `<label>Kommentar / föreslagen justering<textarea id="votecomment" maxlength="1000" placeholder="Till exempel: byt plats på två spelare för bättre positionstäckning."></textarea></label><div class="actions"><button id="approve" class="primary">Godkänn förslaget</button><button id="adjust">Rösta för justering</button><button id="editproposal">Justera lagen</button></div><p class="hint">Alla ${state.coaches.length} inbjudna tränare behöver godkänna. Ändringar i lagen kräver nya röster.</p><button id="acceptproposal" class="primary wide" ${approved ? '' : 'disabled'}>Spara accepterade lag</button>`}<div class="actions"><button id="printreview">Skriv ut lagen</button><button id="reuse">Använd som nytt utkast</button></div>${p.previous.length ? `<p class="hint">${p.previous.length} tidigare versioner har ersatts. Deras röster räknas inte.</p>` : ''}`;
+  $('#reviewdetail').innerHTML = `<p class="${accepted ? 'success' : 'hint'}">${accepted ? 'Accepterat och sparat · ' + new Date(p.acceptedAt).toLocaleDateString('sv-SE') : 'Version ' + p.revision + ' · Rösterna gäller bara denna version.'}</p><p class="hint compare-hint">Bläddra i sidled för att jämföra alla lag.</p>${teamsHTML(p)}${p.importedAt ? '<p class="hint">Importerad historik från tidigare Lagbyggaren. Gamla röster har inte förts över.</p>' : ''}<h3 class="sub">TRÄNARNAS BEDÖMNING</h3><ul class="votes">${(p.reviewers || state.coaches).map(c => { const vote = p.votes[c.id]; return `<li><b>${esc(c.name)}${c.id === me ? ' (du)' : ''}</b> · ${vote?.choice === 'approve' ? 'Godkänner' : vote?.choice === 'adjust' ? 'Önskar justering' : accepted ? 'Ingick inte i beslutet' : 'Inväntar svar'}${vote?.comment ? '<p>' + esc(vote.comment) + '</p>' : ''}</li>`; }).join('')}</ul>${accepted ? '' : `<label>Kommentar / föreslagen justering<textarea id="votecomment" maxlength="1000" placeholder="Till exempel: byt plats på två spelare för bättre positionstäckning."></textarea></label><div class="actions"><button id="approve" class="primary">Godkänn förslaget</button><button id="adjust">Rösta för justering</button><button id="editproposal">Justera lagen</button></div><p class="hint">Alla ${state.coaches.length} inbjudna tränare behöver godkänna. Ändringar i lagen kräver nya röster.</p><button id="acceptproposal" class="primary wide" ${approved ? '' : 'disabled'}>Spara accepterade lag</button>`}<div class="actions"><button id="printreview">Skriv ut lagen</button><button id="reuse">Använd som nytt utkast</button></div>${p.previous.length ? `<p class="hint">${p.previous.length} tidigare versioner har ersatts. Deras röster räknas inte.</p>` : ''}`;
   if (!accepted) {
     $('#votecomment').value = previousComment ?? p.votes[me]?.comment ?? '';
     const vote = choice => act('proposal.vote', { id: p.id, revision: p.revision, choice, comment: $('#votecomment').value });
@@ -200,12 +202,16 @@ $('#print').onclick = () => { document.body.className = 'print-draft'; window.pr
 window.addEventListener('afterprint', () => document.body.className = '');
 function renderCoaches() {
   $('#sharinghelp').textContent = shared ? 'Spelarregister, förslag, röster och accepterade lag sparas gemensamt. Varje tränare har en personlig åtkomstlänk.' + (['127.0.0.1', 'localhost'].includes(location.hostname) ? ' Du använder en lokal testadress. Inbjudningslänkar här fungerar bara på den här datorn. För kollegor via internet krävs den publicerade HTTPS-adressen.' : '') : 'Den här versionen sparar truppen och lagen i din webbläsare. Exportera truppen för att dela en kopia. Gemensam trupp och tränarröster mellan enheter behöver en ansluten lagringstjänst; en delad webbadress synkroniserar inte uppgifterna.';
+  if (accessAuth) $('#sharinghelp').textContent = 'Spelarnas nivåer, positioner, lagförslag och röster delas med alla godkända tränare. Inloggningen verifierar e-postadressen. Huvudtränaren bjuder in kollegor här.';
+  $('#migratefield').hidden = !accessAuth || !owner || state.players.length > 0 || state.proposals.length > 0;
+  $('#coachemailfield').hidden = !accessAuth; $('#coachemail').required = accessAuth;
+  $('#inviteform button').textContent = accessAuth ? 'Lägg till tränare' : 'Skapa personlig inbjudan';
   $('#inviteform').hidden = !shared || !owner; $('#logout').hidden = !shared;
   $('#coachlist').innerHTML = state.coaches.map(c => `<div class="coach"><span>${esc(c.name)}${c.id === me ? ' (du)' : ''}</span>${shared && owner && c.id !== me ? `<button data-revoke="${c.id}">Ta bort åtkomst</button>` : ''}</div>`).join('');
 }
 $('#inviteform').onsubmit = async e => {
   e.preventDefault(); if (busy) return; busy = true;
-  try { const data = await api('invite', { name: $('#coachname').value.trim() }); acceptEnvelope(data); $('#invitation').hidden = false; $('#invitelink').value = location.origin + '/#key=' + data.invitation; $('#coachname').value = ''; }
+  try { const data = await api('invite', { name: $('#coachname').value.trim(), ...(accessAuth ? { email: $('#coachemail').value.trim() } : {}) }); acceptEnvelope(data); $('#invitation').hidden = false; $('#invitelink').value = data.inviteUrl || location.origin + '/#key=' + data.invitation; $('#coachname').value = ''; $('#coachemail').value = ''; if (accessAuth) $('#invitehelp').textContent = 'Tränaren är tillagd. Skicka webbadressen till kollegan, som loggar in med sin godkända e-postadress. Inget mejl har skickats från appen.'; }
   catch (error) { notice(error.message); } finally { busy = false; }
 };
 $('#copyinvite').onclick = async () => { try { await navigator.clipboard.writeText($('#invitelink').value); notice('Länken är kopierad.'); } catch { $('#invitelink').select(); notice('Markera och kopiera länken.'); } };
@@ -213,6 +219,16 @@ $('#coachlist').onclick = async e => {
   const id = e.target.dataset.revoke; if (!id || busy) return;
   if (!confirm('Ta bort tränarens åtkomst? Tränaren ingår då inte i kommande godkännanden.')) return;
   busy = true; try { acceptEnvelope(await api('revoke', { id })); $('#invitation').hidden = true; } catch (error) { notice(error.message); } finally { busy = false; }
+};
+$('#migrate').onchange = async e => {
+  const file = e.target.files[0]; if (!file || busy) return;
+  busy = true;
+  try {
+    if (file.size > 750000) throw new Error('Säkerhetskopian är för stor.');
+    const snapshot = JSON.parse(await file.text());
+    if (!confirm('Flytta in truppen och laghistoriken i den gemensamma gruppen? Inbjudningar följer inte med och öppna förslag behöver nya röster.')) return;
+    acceptEnvelope(await api('migrate', { snapshot })); invalidate(); notice('Truppen och historiken är inflyttade.');
+  } catch (error) { notice(error.message); } finally { busy = false; e.target.value = ''; }
 };
 $('#backup').onclick = () => download({ schema: 2, exportedAt: new Date().toISOString(), ...state }, 'lagbyggaren-sakerhetskopia.json');
 $('#export').onclick = () => download(state.players, 'ankaret-spelare.json');
@@ -235,21 +251,25 @@ $('#demo').onclick = async () => {
 };
 async function connect() { try { acceptEnvelope(await api('state')); return true; } catch (error) { $('#connection').textContent = 'Inte ansluten · Ändringar kan inte sparas gemensamt just nu.'; notice(error.message); return false; } }
 $('#loginform').onsubmit = async e => { e.preventDefault(); token = $('#accesskey').value.trim(); if (await connect()) { localStorage.setItem('lagbyggaren-access', token); $('#accesskey').value = ''; } };
-$('#logout').onclick = () => { localStorage.removeItem('lagbyggaren-access'); token = ''; state = TeamStore.initial(); draft = null; location.reload(); };
+$('#logout').onclick = () => { if (accessAuth) { location.assign('/cdn-cgi/access/logout'); return; } localStorage.removeItem('lagbyggaren-access'); token = ''; state = TeamStore.initial(); draft = null; location.reload(); };
 document.querySelectorAll('.tab').forEach(el => el.onclick = () => tab(el.dataset.tab));
+let lastActivity = Date.now();
+for (const event of ['pointerdown', 'keydown', 'focus']) window.addEventListener(event, () => { lastActivity = Date.now(); }, { passive: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) lastActivity = Date.now(); });
 async function boot() {
   slotsRender(); targetsRender();
+  if (accessAuth) { $('#loginform').hidden = true; $('#accesslogin').hidden = false; $('#loginintro').textContent = 'Logga in med din e-postadress. Huvudtränaren måste ha lagt till dig i tränargruppen.'; }
   if (shared) {
-    const incoming = new URLSearchParams(location.hash.slice(1)).get('key');
-    token = incoming || localStorage.getItem('lagbyggaren-access') || '';
+    const incoming = !accessAuth && new URLSearchParams(location.hash.slice(1)).get('key');
+    token = accessAuth ? '' : incoming || localStorage.getItem('lagbyggaren-access') || '';
     if (incoming) { localStorage.setItem('lagbyggaren-access', incoming); history.replaceState(null, '', location.pathname); }
     $('#appcontent').hidden = true;
-    if (token) await connect(); else { $('#login').hidden = false; $('#connection').textContent = 'Öppna din personliga tränarlänk för att ansluta.'; }
+    if (accessAuth || token) await connect(); else { $('#login').hidden = false; $('#connection').textContent = 'Öppna din personliga tränarlänk för att ansluta.'; }
     setInterval(async () => {
-      if (!token || busy || document.hidden) return;
+      if ((!accessAuth && !token) || busy || document.hidden || Date.now() - lastActivity > 300000) return;
       try { const data = await api('state'); if (data.state.version !== state.version) acceptEnvelope(data); else $('#connection').textContent = `● Delad trupp · ${state.coaches.find(c => c.id === me)?.name || 'Tränare'} · Synkroniserad`; }
       catch { $('#connection').textContent = 'Anslutningen avbröts · Försöker igen automatiskt.'; }
-    }, 10000);
+    }, window.LAGBYGGAREN_CONFIG?.pollMs || 30000);
   } else {
     try {
       const saved = localStorage.getItem(LOCAL_KEY);

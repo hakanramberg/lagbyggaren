@@ -1,8 +1,25 @@
 {
   "name": "ankaret-lagbyggaren",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Gemensam lagplanering för HK Ankarets tränare",
-  "engines": { "node": ">=24 <25" },
-  "scripts": { "start": "node server.cjs", "test": "node --test test.cjs", "preview": "node preview.cjs" }
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "start": "node server.cjs",
+    "test": "node --test test.cjs cloudflare/test.mjs",
+    "preview": "node preview.cjs",
+    "build:cloudflare": "node scripts/build-cloudflare.mjs",
+    "test:cloudflare": "node --test cloudflare/test.mjs",
+    "deploy:cloudflare": "wrangler deploy",
+    "db:cloudflare": "wrangler d1 migrations apply lagbyggaren --remote"
+  },
+  "dependencies": {
+    "jose": "^6.2.12"
+  },
+  "devDependencies": {
+    "wrangler": "^4.129.0"
+  },
+  "packageManager": "pnpm@11.19.0"
 }

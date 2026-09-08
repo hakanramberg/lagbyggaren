@@ -1,60 +1,59 @@
 # Lagbyggaren
 
-Lagbyggaren följer Sommarjaktens röda HK Ankaret-tema och fungerar för träningar, matcher och turneringar.
+Fristående handbollsapp med HK Ankarets utseende. Spelartrupp, nivå 1–3 i halvsteg, 1–3 lag, 6+1 eller 4+1, positionstäckning, nivåanpassning och varierade lagkamrater. Lag visas sida vid sida vid granskning.
 
-## Användning
+## Webbversioner
 
-1. Lägg till spelare med första-/andraposition och utvecklingsnivå 1–3 i steg om 0,5. Lägre tal betyder högre utvecklingsnivå.
-2. Välj deltagare, namn och typ av tillfälle, 1–3 lag, spelform 6+1 eller 4+1, samt jämnstarka eller nivåanpassade lag.
-3. Skapa ett förslag. Flytta spelare mellan lagen vid behov. Luckor i positionstäckningen visas.
-4. Spara för granskning. Tränarna godkänner eller begär justering med kommentar. Varje tränare har en röst som kan ändras.
-5. Alla för närvarande inbjudna tränare måste godkänna den aktuella versionen innan någon kan välja **Spara accepterade lag**. Ändras ett förslag nollställs rösterna. En sparad uppställning är låst; välj **Använd som nytt utkast** för att utgå från den igen.
+- GitHub Pages: https://hakanramberg.github.io/lagbyggaren/ — fungerar med lokal webbläsarlagring tills Cloudflare är anslutet.
+- Cloudflare: Workers + D1 + Access. Samma kod, men gemensam trupp, e-postinloggning, tränarröster och sparad historik. Publicering kräver Cloudflare-kontot och Access-inställningarna nedan.
 
-Spelarnas stabila ID:n följer med i export/import och behålls vid namnändring. Accepterade lag sparar en separat kopia av spelarnas uppgifter och vilka tränare som deltog i beslutet. Historiken ändras inte när spelare ändras eller tas bort.
+GitHub innehåller endast kod. Spelaruppgifter, inloggningsnycklar och huvudtränarens e-postadress publiceras inte i repositoryt.
 
-## Gemensam lagring och åtkomst
+## Gemensamt arbetsflöde
 
-Webbversionen sparar gemensamt på servern: trupp, förslag, versionsnummer, röster och accepterade lag. Tränarna ser uppdateringar inom ungefär tio sekunder. Samtidiga skrivningar versionskontrolleras; äldre ändringar får inte skriva över nyare utan att användaren försöker igen. Deltagarval och osparade utkast är privata för den öppna sidan.
+1. Huvudtränaren loggar in genom Cloudflare Access och får en tom gemensam grupp vid första inloggningen.
+2. Lägg till tränare med namn och e-postadress under Tränare. Skicka appens webbadress till dem. Appen skickar inga inbjudningsmejl. Access hanterar engångskoden vid inloggning.
+3. Alla godkända tränare kan läsa och redigera truppen, inklusive utvecklingsnivåer, samt granska lagförslag. Endast huvudtränaren hanterar åtkomst och import av historik.
+4. Ett förslag kan godkännas eller få en justeringsröst med kommentar. Alla inbjudna tränare måste godkänna aktuell version innan lagen sparas som accepterade. En ny version nollställer rösterna.
+5. Accepterade lag är låsta kopior. Namnändringar i truppen ändrar inte tidigare lag. De tio senast accepterade tillfällena används för att prioritera nya lagkamrater; positioner och nivå vägs också in.
 
-Huvudtränaren skapar en personlig inbjudningslänk för varje kollega under **Tränare**. Varje länk är en åtkomstnyckel och identifierar en tränare. Det är inte e-postverifiering eller SSO. Alla tränare kan redigera truppen och förslagen; endast huvudtränaren kan bjuda in och återkalla åtkomst. Nycklar lagras som SHA-256-hashar på servern. Nyckeln i en inbjudningslänk flyttas från URL-fragmentet till webbläsarens lokala lagring vid inloggning. Utloggning tar bort den lokala nyckeln. Återkallad åtkomst gäller omedelbart på servern.
+## Gratisnivå
 
-## Lokal förhandsvisning
+Använd **Workers Free**, **D1 på Free** och **Cloudflare Access Free**. Projektet innehåller ingen uppgradering till betald plan. Kontrollera kontots befintliga plan före publicering; en betald plan ska inte aktiveras för detta projekt.
 
-Med Node 24 installerat, kör `npm run preview` i denna mapp. Öppna länken i `.data/preview-url.txt`. Tjänsten lyssnar bara på den egna datorn. Den länken fungerar inte från kollegornas hem. Ingen molntjänst startas av detta kommando.
+Enligt Cloudflares dokumentation kontrollerad 2026-09-08 har Workers Free 100 000 anrop per dygn och 10 ms CPU per anrop. D1 Free har 5 miljoner lästa rader, 100 000 skrivna rader per dygn och 5 GB total lagring. Dessa är kontogränser, inte reserverade för denna app. Vid överskridna gratisgränser kan tjänsten sluta svara fram till återställning; appen uppgraderar inte kontot.
 
-Om `index.html` öppnas direkt som fil används en tydligt märkt lokal förhandsvisning utan delning. Tidigare spelarregister migreras automatiskt och deras ID:n bevaras. Lokal filversion och serverversion har olika lagring: exportera/importera truppen för att flytta den. Export av spelare innehåller ingen historik. Säkerhetskopian under Tränare innehåller hela gruppens data utan åtkomstnycklar.
+Lagberäkningen görs i webbläsaren. Synkronisering sker var 30:e sekund och pausas i dolda flikar eller efter fem minuters inaktivitet. Appen begränsar gruppen till 20 tränare, 200 spelare och 750 000 byte sparat innehåll för att hålla beräkning och datatrafik små. Historiken tas aldrig bort automatiskt när gränsen nås.
 
-## Internetpublicering på Render – förberett, inte driftsatt
+Referenser: https://developers.cloudflare.com/workers/platform/pricing/ och https://developers.cloudflare.com/d1/platform/pricing/.
 
-`render.yaml` definierar en webbtjänst i Frankfurt med en beständig disk. Tjänsten och disken är avgiftsbelagda. Läs det aktuella kostnadsförslaget i Render innan du godkänner skapandet. Det finns inget aktivt abonnemang eller publicerad internetadress skapad av detta projekt.
+## Publicera på Cloudflare
 
-1. Lägg appkoden i ett privat Git-repository. `.data`, `.test-data*` och åtkomstnycklar ska inte följa med.
-2. I ditt Render-konto, skapa en Blueprint från repositoryt och ange Blueprint-sökväg `render.yaml`.
-3. Kontrollera region, beständig disk och kostnad. Anpassa `OWNER_NAME` före första starten. Render genererar `OWNER_TOKEN`; behåll den som hemlighet.
-4. Efter publicering, öppna tjänstens HTTPS-adress och ange `OWNER_TOKEN` från tjänstens miljöinställningar i appens inloggningsformulär. Bjud sedan in kollegorna med personliga länkar.
-5. Importera spelartruppen från den lokala appen. Testa en inbjudan, två tränarröster, ett accepterat förslag och en omstart innan gruppen börjar använda tjänsten.
+Krav: Node 24, pnpm, ett Cloudflare-konto på gratisnivån och en konfigurerad Cloudflare Access-organisation. `pnpm install --frozen-lockfile` installerar låsta beroenden. GitHub Pages ska fortsätta fungera under installationen.
 
-Servern använder en atomiskt skriven och flushad JSON-fil under `DATA_DIR`. Kör exakt en serverinstans med beständig disk. Render-konfigurationen monterar `/var/data`; vanlig tillfällig lagring får inte användas. Webbadress och HTTPS hanteras av Render. Inga anrop görs till Sommarjaktens befintliga Google Apps Script-tjänst.
+1. Autentisera Cloudflares officiella verktyg med `pnpm exec wrangler login` och kontrollera kontot med `pnpm exec wrangler whoami`. Ingen token ska kopieras till källkoden.
+2. Skapa D1 med `pnpm exec wrangler d1 create lagbyggaren`. Lägg databasens ID i `wrangler.jsonc` (ID:t är inte en hemlighet). Platshållaren i filen måste ersättas; publicera inte med den.
+3. Kör `pnpm exec wrangler d1 migrations apply lagbyggaren --remote`. Detta skapar bara tabellen; inga spelaruppgifter skrivs in.
+4. Publicera Worker-koden med `pnpm exec wrangler deploy`. `/api/` vägrar åtkomst tills Access är konfigurerat och en giltig signerad identitet finns. Ingen första besökare kan ta över huvudtränarrollen.
+5. Skydda hela Workerns `workers.dev`-adress med Cloudflare Access. Använd e-post med engångskod som inloggningsmetod. Välj aldrig en Bypass-policy. För att tränarna ska kunna läggas till inne i appen kan Access tillåta verifierad OTP-inloggning, medan appens egen lista avgör vilka verifierade e-postadresser som får data. Alternativt begränsar Access också exakta e-postadresser; då måste listorna hållas synkroniserade av huvudtränaren. Access Free har en användargräns som också gäller andra appar på kontot.
+6. Ange `ACCESS_ISSUER` (exakt `https://<team>.cloudflareaccess.com`), `ACCESS_AUD` (Access-appens audience) och `OWNER_EMAIL` via `pnpm exec wrangler secret put <namn>`. `OWNER_NAME` är valfritt. Huvudtränarens e-post måste anges före första användningen.
+7. Kontrollera två olika godkända konton, ett icke inbjudet konto, ett accepterat lag och återkallad åtkomst. Först därefter används Cloudflare-adressen som gruppens gemensamma app.
 
-Fullständig återställning vid drift sker från en säkerhetskopia av `DATA_DIR/workspace.json` medan tjänsten är stoppad; den innehåller även nyckelhashar. Spara den separat från koden. Render har också disksnapshots. UI-exporten är en läsbar datakopia utan autentiseringsuppgifter och har ännu ingen egen återställningsknapp. En ändrad `OWNER_TOKEN` ändrar inte automatiskt en redan skapad huvudtränares nyckel; den används bara vid första start.
+Cloudflare-konfigurationen publicerar bara sex uttryckligen valda webbappsfiler. `.data`, `.dev.vars`, `.env`, `.wrangler`, testdata och källfiler är inte statiska tillgångar. Förhandsvisningsadresser är avstängda. Sessionsidentitet verifieras med Cloudflares signerade JWT: rätt signatur, utfärdare, audience och giltighetstid krävs. En e-postheader ensam ger aldrig åtkomst. D1-bindningen nås endast från Workern. Inga CORS-undantag öppnar databasen för GitHub Pages.
 
-Officiella driftreferenser: https://render.com/docs/disks och https://render.com/docs/blueprint-spec. Aktuellt pris: https://render.com/pricing.
+## Flytta tidigare uppgifter
 
-## Hur historiken påverkar lagförslagen
+I GitHub-versionen, välj **Tränare → Säkerhetskopiera trupp och sparade lag**. I en tom Cloudflare-grupp visas **Flytta in trupp och historik** för huvudtränaren. Importen behåller spelar-ID:n och accepterad laghistorik. Historiken märks importerad; tidigare tränaråtkomst och röster förs inte över. Öppna förslag behöver nya röster. En redan använd grupp kan inte skrivas över med en historikimport.
 
-De tio senast accepterade tillfällena, efter tidpunkten då de accepterades, räknas. Spelarpar som nyligen varit i samma lag får en högre kostnad i sökningen, med avtagande vikt från 1,0 till 0,1. Lagnummer spelar ingen roll: att bara byta lagnamn ger ingen förbättring. Avbytare ingår i laggemenskapen och snittnivån. Oaccepterade förslag påverkar inte historiken.
+## Teknik och samtidighet
 
-Positionstäckning, målnivå och varierade lagkamrater vägs samman. Truppstorlekarna skiljer högst en spelare vid automatisk fördelning. Sökningen är heuristisk och garanterar inte ett globalt optimum eller helt nya lag varje gång. Med ett lag och samma deltagare går det inte att byta lagkamrater. Manuella flyttar kan ge ojämna truppstorlekar.
+D1 innehåller en versionskontrollerad rad med gruppens tillstånd. Alla uppdateringar använder atomisk `UPDATE ... WHERE version = ?`; en samtidig ändring ger 409 och hämtar den senaste versionen. Det gäller också inbjudningar, borttagen åtkomst och röster. Accepterade lag bevarar sina spelaruppgifter och beslutsdeltagare. Ingen automatisk återförsöksskrivning skapar dubbla förslag efter nätverksfel.
 
-## Kontroller
+## Lokal utveckling och kontroller
 
-`npm test` testar fördelning, målnivå, variation med historik, unika spelare, behörigheter, versionskonflikter, röster, accepterande, låst historik och beständighet efter omstart.
+- `node --test test.cjs cloudflare/test.mjs`: lagfördelning, historia, lokalt serverflöde, signerad Access-inloggning, nekad åtkomst, riktig SQLite med D1-anropskontrakt, samtidiga ändringar, röster, accepterade kopior och import.
+- `pnpm exec wrangler deploy --dry-run`: bygger Worker och statiska tillgångar utan publicering.
+- `pnpm run preview`: tidigare lokal Node-server, endast åtkomlig på datorn. Personliga testlänkar där används inte i Cloudflare-versionen.
+- Direkt öppning av `index.html`: lokal webbläsarlagring.
 
-`verify.cjs` testar två separata webbläsarsessioner från inbjudan till accepterat lag, nya versioner, mobilvy och migration av gamla spelare. Det använder den här datorns Playwright-installation och Edge. Testdata skrivs till ignorerade `.test-data-*`-mappar, separat från riktiga uppgifter.
-
-## GitHub Pages
-
-Appens statiska version publiceras under /lagbyggaren/ i det egna repositoryt hakanramberg/lagbyggaren. config.js anger lokal webbläsarlagring, så ingen saknad serverinloggning blockerar appen. Spelare, granskning av den egna tränaren och accepterade lag fungerar lokalt. Delning av webbadressen innebär inte delad data. Node-servern levererar en egen config.js som aktiverar gemensam lagring när serverversionen används. Personuppgifter och åtkomstnycklar ska aldrig läggas i det publika repositoryt.
-
-Eget repository: https://github.com/hakanramberg/lagbyggaren
-Webbapp: https://hakanramberg.github.io/lagbyggaren/
+Algoritmen är heuristisk: jämna truppstorlekar och unika spelare garanteras vid automatisk fördelning, men full positionstäckning, exakt målnivå och helt nya lagkamrater beror på truppen. Med ett lag och samma deltagare kan lagkamrater inte varieras.
