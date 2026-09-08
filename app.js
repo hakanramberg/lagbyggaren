@@ -203,7 +203,7 @@ window.addEventListener('afterprint', () => document.body.className = '');
 function renderCoaches() {
   $('#sharinghelp').textContent = shared ? 'Spelarregister, förslag, röster och accepterade lag sparas gemensamt. Varje tränare har en personlig åtkomstlänk.' + (['127.0.0.1', 'localhost'].includes(location.hostname) ? ' Du använder en lokal testadress. Inbjudningslänkar här fungerar bara på den här datorn. För kollegor via internet krävs den publicerade HTTPS-adressen.' : '') : 'Den här versionen sparar truppen och lagen i din webbläsare. Exportera truppen för att dela en kopia. Gemensam trupp och tränarröster mellan enheter behöver en ansluten lagringstjänst; en delad webbadress synkroniserar inte uppgifterna.';
   if (accessAuth) $('#sharinghelp').textContent = 'Spelarnas nivåer, positioner, lagförslag och röster delas med alla godkända tränare. Inloggningen verifierar e-postadressen. Huvudtränaren bjuder in kollegor här.';
-  $('#migratefield').hidden = !accessAuth || !owner || state.players.length > 0 || state.proposals.length > 0;
+  $('#migratefield').hidden = !(accessAuth || window.LAGBYGGAREN_CONFIG?.migration) || !owner || state.players.length > 0 || state.proposals.length > 0;
   $('#coachemailfield').hidden = !accessAuth; $('#coachemail').required = accessAuth;
   $('#inviteform button').textContent = accessAuth ? 'Lägg till tränare' : 'Skapa personlig inbjudan';
   $('#inviteform').hidden = !shared || !owner; $('#logout').hidden = !shared;

@@ -97,3 +97,41 @@ test('migration preserves player IDs and accepted history, resets pending votes,
     assert.equal((await handler.fetch(request('/api/migrate', jwt, { version: data.state.version, snapshot }), env)).status, 400);
   } finally { env.DB.close(); }
 });
+
+test('personal links isolate votes and support revocation without Access', async () => {
+  const secret = 'a'.repeat(64);
+  const hash = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret))).toString('hex');
+  const env = { ...baseEnv, AUTH_MODE: 'links', OWNER_TOKEN_HASH: hash, DB: database() }, handler = createHandler();
+  async function call(path, key, body) {
+    const req = request(path, null, body);
+    if (key) req.headers.set('authorization', 'Bearer ' + key);
+    const res = await handler.fetch(req, env);
+    return { status: res.status, ...await res.json() };
+  }
+  try {
+    assert.equal((await call('/api/state')).status, 401);
+    assert.equal((await call('/api/state', 'b'.repeat(64))).status, 403);
+    let owner = await call('/api/state', secret);
+    assert.equal(owner.owner, true);
+    const invited = await call('/api/invite', secret, { version: owner.state.version, name: 'Kollega' });
+    assert.equal(invited.status, 200);
+    assert.match(invited.invitation, /^[a-f0-9]{64}$/);
+    assert.equal('tokens' in invited, false);
+    const colleague = await call('/api/state', invited.invitation);
+    assert.equal(colleague.owner, false);
+    assert.notEqual(colleague.me, owner.me);
+    assert.equal((await call('/api/invite', invited.invitation, { version: colleague.state.version, name: 'Extra' })).status, 403);
+    const player = { id: 'p', name: 'Spelare', first: 'MV', second: '', level: 2 };
+    owner = await call('/api/action', secret, { version: invited.state.version, action: { type: 'player.save', data: player } });
+    assert.equal((await call('/api/state', invited.invitation)).state.players[0].level, 2);
+    const proposal = { name: 'Träning', kind: 'Träning', date: '', teams: [[player]], slots: ['MV', 'V6', 'M9', 'H6', 'M6'], mode: 'balanced', targets: [], variation: true };
+    owner = await call('/api/action', secret, { version: owner.state.version, action: { type: 'proposal.save', data: proposal } });
+    const id = owner.state.proposals[0].id;
+    owner = await call('/api/action', secret, { version: owner.state.version, action: { type: 'proposal.vote', data: { id, revision: 1, choice: 'approve', comment: '' } } });
+    const vote = await call('/api/action', invited.invitation, { version: owner.state.version, action: { type: 'proposal.vote', data: { id, revision: 1, choice: 'adjust', comment: 'Byt målvakt' } } });
+    assert.equal(Object.keys(vote.state.proposals[0].votes).length, 2);
+    assert.equal((await call('/api/action', secret, { version: vote.state.version, action: { type: 'proposal.accept', data: { id, revision: 1 } } })).status, 400);
+    assert.equal((await call('/api/revoke', secret, { version: vote.state.version, id: colleague.me })).status, 200);
+    assert.equal((await call('/api/state', invited.invitation)).status, 403);
+  } finally { env.DB.close(); }
+});
