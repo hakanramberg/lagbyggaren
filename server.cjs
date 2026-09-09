@@ -35,7 +35,7 @@ function createApp(options = {}) {
     for await (const chunk of req) { size += chunk.length; if (size > 1024 * 1024) throw new Error('Filen är för stor.'); chunks.push(chunk); }
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   }
-  const files = { '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/store.js': 'store.js', '/engine.js': 'engine.js', '/styles.css': 'styles.css', '/logo.png': 'logo.png' };
+  const files = { '/': 'index.html', '/index.html': 'index.html', '/app.js': 'app.js', '/team-image.js': 'team-image.js', '/store.js': 'store.js', '/engine.js': 'engine.js', '/styles.css': 'styles.css', '/logo.png': 'logo.png' };
   const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png' };
   const rate = new Map();
   const server = http.createServer(async (req, res) => {

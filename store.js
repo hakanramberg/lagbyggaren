@@ -13,6 +13,11 @@
   function initial(coachId = 'local', name = 'Jag') {
     return { version: 0, players: [], proposals: [], coaches: [{ id: coachId, name }] };
   }
+  function validateTeamCoaches(value, count) {
+    const names = value === undefined ? Array(count).fill('') : value;
+    check(Array.isArray(names) && names.length === count && names.every(n => typeof n === 'string' && n.length <= 200), 'Ange tränare för varje lag, högst 200 tecken per lag.');
+    return names.map(n => n.trim());
+  }
   function proposalData(data) {
     check(data && text(data.name, 80), 'Ge tillfället ett namn, till exempel Vikingaspelen 2026.');
     check(['Träning', 'Match', 'Turnering'].includes(data.kind), 'Välj typ av tillfälle.');
@@ -22,7 +27,7 @@
     check(Array.isArray(data.slots) && [5, 7].includes(data.slots.length) && data.slots[0] === 'MV' && data.slots.slice(1).every(s => s !== 'MV' && Object.hasOwn(POSITIONS, s)), 'Ogiltig uppställning.');
     check(['balanced', 'tiered'].includes(data.mode), 'Ogiltig lagfördelning.');
     check(Array.isArray(data.targets) && (data.mode === 'balanced' || (data.targets.length === data.teams.length && data.targets.every(x => levels.includes(x)))), 'Ogiltiga målnivåer.');
-    return { name: data.name.trim(), kind: data.kind, date: data.date, teams: data.teams.map(validatePlayers), slots: [...data.slots], mode: data.mode, targets: [...data.targets], variation: !!data.variation };
+    return { name: data.name.trim(), kind: data.kind, date: data.date, teams: data.teams.map(validatePlayers), teamCoaches: validateTeamCoaches(data.teamCoaches, data.teams.length), slots: [...data.slots], mode: data.mode, targets: [...data.targets], variation: !!data.variation };
   }
   function apply(state, action, actor, id, now = new Date().toISOString()) {
     check(state.coaches.some(c => c.id === actor), 'Tränaren saknar åtkomst.');
@@ -49,6 +54,15 @@
         } else {
           next.proposals.unshift({ ...clean, id, revision: 1, status: 'review', votes: {}, previous: [], createdBy: actor, updatedAt: now, createdAt: now });
         }
+        break;
+      }
+      case 'proposal.staff': {
+        const p = find();
+        check(p.status === 'review' && d.revision === p.revision, 'Förslaget har ändrats eller är accepterat. Öppna senaste versionen.');
+        const names = validateTeamCoaches(d.teamCoaches, p.teams.length);
+        check(JSON.stringify(names) !== JSON.stringify(p.teamCoaches || Array(p.teams.length).fill('')), 'Inga tränare har ändrats.');
+        p.previous.push({ revision: p.revision, votes: p.votes, updatedAt: p.updatedAt });
+        p.teamCoaches = names; p.revision++; p.votes = {}; p.updatedAt = now;
         break;
       }
       case 'proposal.vote': {

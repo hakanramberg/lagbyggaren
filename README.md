@@ -33,3 +33,9 @@ Kontogränser gäller även andra appar på samma konto. Se https://developers.c
 Kör `node --test test.cjs cloudflare/test.mjs` för lagfördelning, historik, samtidighet, inbjudningar, nekad och återkallad åtkomst, röster och import. `node scripts/build-pages.mjs` kontrollerar publiceringsbygget. `pnpm run preview` startar den tidigare lokala servern.
 
 Algoritmen är heuristisk: full positionstäckning, exakt målnivå och nya lagkamrater beror på tillgänglig trupp.
+
+## Bild till föräldrar och tränare per lag
+
+I granskningen anges ett eller flera tränarnamn vid varje lag. Spara tränare per lag skapar en ny version och nollställer tidigare röster. Namnen följer med till accepterade lag, säkerhetskopior och återanvända utkast. Äldre förslag fungerar utan ifyllda tränarnamn.
+
+Exportera bild till föräldrar laddar ner en PNG från granskningen eller sparade lag. Bilden visar namn på tillfället, datum, lag, tränare och samtliga spelare alfabetiskt. Nivåer, snitt, positioner, avbytarindelning och tränarnas röster ingår inte. Bilden ritas lokalt i webbläsaren från ett separat underlag med endast avsedda uppgifter.

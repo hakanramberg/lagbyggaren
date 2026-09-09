@@ -112,7 +112,7 @@ for (const id of ['occasion', 'kind', 'date']) $('#' + id).oninput = () => { if 
 function row(p, team, pos, note, movable) {
   return `<div class="assignment"><span class="pos">${esc(pos)}</span><span class="person">${esc(p.name)}${note ? '<br><small>' + note + '</small>' : ''}</span><span>${num(p.level)}</span>${movable ? `<select data-move="${esc(p.id)}" data-from="${team}" aria-label="Flytta ${esc(p.name)} till lag">${draft.teams.map((_, i) => `<option value="${i}" ${i === team ? 'selected' : ''}>Lag ${i + 1}</option>`).join('')}</select>` : ''}</div>`;
 }
-function teamsHTML(p, movable = false) {
+function teamsHTML(p, movable = false, staffEditable = false) {
   return `<p class="hint">${esc(p.kind)}${p.date ? ' · ' + esc(p.date) : ''} · ${p.slots.length - 1} + 1 · ${p.mode === 'balanced' ? 'Jämnstarka' : 'Nivåanpassade'} lag · Snitt ${num(TeamEngine.average(p.teams.flat()))}</p><div class="teams">${p.teams.map((team, i) => {
     const a = TeamEngine.assign(team, p.slots), used = new Set(a.picks.map(x => x.index)), missing = [];
     const rows = p.slots.map((slot, j) => {
@@ -122,7 +122,7 @@ function teamsHTML(p, movable = false) {
       return row(team[pick.index], i, slot, pick.secondary ? 'Andraposition' : !pick.fit ? 'Ovan position' : '', movable);
     }).join('');
     const bench = team.filter((_, j) => !used.has(j));
-    return `<article class="team"><div class="teamhead"><h3>Lag ${i + 1}</h3><p>${team.length} spelare · Snittnivå <b>${num(TeamEngine.average(team))}</b>${p.mode === 'tiered' ? ' · Mål ' + num(p.targets[i]) : ''}</p></div><div class="teamlist">${missing.length ? `<p class="warning">Saknar positionstäckning: ${missing.join(', ')}. Kontrollera uppställningen.</p>` : ''}${rows}${bench.length ? '<p class="sub">AVBYTARE · ' + bench.length + '</p>' + bench.map(x => row(x, i, x.first, '', movable)).join('') : ''}</div></article>`;
+    return `<article class="team"><div class="teamhead"><h3>Lag ${i + 1}</h3><p>${team.length} spelare · Snittnivå <b>${num(TeamEngine.average(team))}</b>${p.mode === 'tiered' ? ' · Mål ' + num(p.targets[i]) : ''}</p></div><div class="teamstaff">${staffEditable ? `<label>Tränare · Lag ${i + 1}<input data-team-coach="${i}" maxlength="200" value="${esc(p.teamCoaches?.[i] || '')}" placeholder="Till exempel Håkan och Anna"></label>` : p.teamCoaches?.[i] ? `<p><b>Tränare:</b> ${esc(p.teamCoaches[i])}</p>` : ''}</div><div class="teamlist">${missing.length ? `<p class="warning">Saknar positionstäckning: ${missing.join(', ')}. Kontrollera uppställningen.</p>` : ''}${rows}${bench.length ? '<p class="sub">AVBYTARE · ' + bench.length + '</p>' + bench.map(x => row(x, i, x.first, '', movable)).join('') : ''}</div></article>`;
   }).join('')}</div>`;
 }
 function renderDraft() {
@@ -169,16 +169,31 @@ function renderLists() {
 function showReview(id, refresh = false) {
   const p = state.proposals.find(p => p.id === id); if (!p) return;
   const previousComment = refresh ? $('#votecomment')?.value : null;
+  const previousStaff = refresh && $('#reviewdialog').dataset.revision === String(p.revision) ? Array.from(document.querySelectorAll('[data-team-coach]'), el => el.value) : null;
+  $('#reviewdialog').dataset.revision = p.revision;
   reviewId = id; $('#reviewtitle').textContent = p.name; $('#reviewdialog').dataset.teams = p.teams.length;
   const accepted = p.status === 'accepted', approved = state.coaches.every(c => p.votes[c.id]?.choice === 'approve');
-  $('#reviewdetail').innerHTML = `<p class="${accepted ? 'success' : 'hint'}">${accepted ? 'Accepterat och sparat · ' + new Date(p.acceptedAt).toLocaleDateString('sv-SE') : 'Version ' + p.revision + ' · Rösterna gäller bara denna version.'}</p><p class="hint compare-hint">Bläddra i sidled för att jämföra alla lag.</p>${teamsHTML(p)}${p.importedAt ? '<p class="hint">Importerad historik från tidigare Lagbyggaren. Gamla röster har inte förts över.</p>' : ''}<h3 class="sub">TRÄNARNAS BEDÖMNING</h3><ul class="votes">${(p.reviewers || state.coaches).map(c => { const vote = p.votes[c.id]; return `<li><b>${esc(c.name)}${c.id === me ? ' (du)' : ''}</b> · ${vote?.choice === 'approve' ? 'Godkänner' : vote?.choice === 'adjust' ? 'Önskar justering' : accepted ? 'Ingick inte i beslutet' : 'Inväntar svar'}${vote?.comment ? '<p>' + esc(vote.comment) + '</p>' : ''}</li>`; }).join('')}</ul>${accepted ? '' : `<label>Kommentar / föreslagen justering<textarea id="votecomment" maxlength="1000" placeholder="Till exempel: byt plats på två spelare för bättre positionstäckning."></textarea></label><div class="actions"><button id="approve" class="primary">Godkänn förslaget</button><button id="adjust">Rösta för justering</button><button id="editproposal">Justera lagen</button></div><p class="hint">Alla ${state.coaches.length} inbjudna tränare behöver godkänna. Ändringar i lagen kräver nya röster.</p><button id="acceptproposal" class="primary wide" ${approved ? '' : 'disabled'}>Spara accepterade lag</button>`}<div class="actions"><button id="printreview">Skriv ut lagen</button><button id="reuse">Använd som nytt utkast</button></div>${p.previous.length ? `<p class="hint">${p.previous.length} tidigare versioner har ersatts. Deras röster räknas inte.</p>` : ''}`;
+  $('#reviewdetail').innerHTML = `<p class="${accepted ? 'success' : 'hint'}">${accepted ? 'Accepterat och sparat · ' + new Date(p.acceptedAt).toLocaleDateString('sv-SE') : 'Version ' + p.revision + ' · Rösterna gäller bara denna version.'}</p><p class="hint compare-hint">Bläddra i sidled för att jämföra alla lag.</p>${teamsHTML(p, false, !accepted)}${accepted ? '' : '<button id="savestaff">Spara tränare per lag</button><p class="hint">Du kan ange flera namn per lag. När tränarna ändras skapas en ny version som behöver godkännas igen.</p>'}${p.importedAt ? '<p class="hint">Importerad historik från tidigare Lagbyggaren. Gamla röster har inte förts över.</p>' : ''}<h3 class="sub">TRÄNARNAS BEDÖMNING</h3><ul class="votes">${(p.reviewers || state.coaches).map(c => { const vote = p.votes[c.id]; return `<li><b>${esc(c.name)}${c.id === me ? ' (du)' : ''}</b> · ${vote?.choice === 'approve' ? 'Godkänner' : vote?.choice === 'adjust' ? 'Önskar justering' : accepted ? 'Ingick inte i beslutet' : 'Inväntar svar'}${vote?.comment ? '<p>' + esc(vote.comment) + '</p>' : ''}</li>`; }).join('')}</ul>${accepted ? '' : `<label>Kommentar / föreslagen justering<textarea id="votecomment" maxlength="1000" placeholder="Till exempel: byt plats på två spelare för bättre positionstäckning."></textarea></label><div class="actions"><button id="approve" class="primary">Godkänn förslaget</button><button id="adjust">Rösta för justering</button><button id="editproposal">Justera lagen</button></div><p class="hint">Alla ${state.coaches.length} inbjudna tränare behöver godkänna. Ändringar i lagen kräver nya röster.</p><button id="acceptproposal" class="primary wide" ${approved ? '' : 'disabled'}>Spara accepterade lag</button>`}<div class="actions"><button id="exportimage" class="primary">Exportera bild till föräldrar</button><button id="printreview">Skriv ut lagen</button><button id="reuse">Använd som nytt utkast</button></div>${p.previous.length ? `<p class="hint">${p.previous.length} tidigare versioner har ersatts. Deras röster räknas inte.</p>` : ''}`;
   if (!accepted) {
+    if (previousStaff?.length === p.teams.length) document.querySelectorAll('[data-team-coach]').forEach((el, i) => el.value = previousStaff[i]);
+    $('#savestaff').onclick = async () => {
+      const teamCoaches = Array.from(document.querySelectorAll('[data-team-coach]'), el => el.value.trim());
+      if (await act('proposal.staff', { id: p.id, revision: p.revision, teamCoaches })) notice('Tränarna är sparade. Den nya versionen behöver godkännas igen.');
+    };
     $('#votecomment').value = previousComment ?? p.votes[me]?.comment ?? '';
-    const vote = choice => act('proposal.vote', { id: p.id, revision: p.revision, choice, comment: $('#votecomment').value });
+    const vote = choice => staffChanged() ? notice('Spara tränarna innan du röstar.') : act('proposal.vote', { id: p.id, revision: p.revision, choice, comment: $('#votecomment').value });
     $('#approve').onclick = () => vote('approve'); $('#adjust').onclick = () => vote('adjust');
-    $('#acceptproposal').onclick = async () => { if (await act('proposal.accept', { id: p.id, revision: p.revision })) { notice('Lagen är accepterade och sparade.'); tab('history'); } };
+    $('#acceptproposal').onclick = async () => { if (staffChanged()) return notice('Spara tränarna innan du accepterar lagen.'); if (await act('proposal.accept', { id: p.id, revision: p.revision })) { notice('Lagen är accepterade och sparade.'); tab('history'); } };
     $('#editproposal').onclick = () => loadDraft(p, true);
   }
+  const staffChanged = () => {
+    const fields = Array.from(document.querySelectorAll('[data-team-coach]'), el => el.value.trim());
+    return fields.length && JSON.stringify(fields) !== JSON.stringify(p.teamCoaches || Array(p.teams.length).fill(''));
+  };
+  $('#exportimage').onclick = async () => {
+    if (staffChanged()) return notice('Spara tränarna innan du exporterar bilden.');
+    try { await TeamImage.download(p); notice('Bilden är exporterad utan nivåer, positioner eller avbytarmarkeringar.'); } catch (error) { notice('Bilden kunde inte exporteras. ' + error.message); }
+  };
   $('#reuse').onclick = () => loadDraft(p, false);
   $('#printreview').onclick = () => { document.body.className = 'print-review'; window.print(); };
   const comparison = $('#reviewdetail .teams'); comparison.tabIndex = 0; comparison.setAttribute('role', 'region'); comparison.setAttribute('aria-label', 'Lag sida vid sida, bläddra i sidled vid behov');

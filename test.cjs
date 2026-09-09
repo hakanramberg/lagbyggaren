@@ -73,3 +73,28 @@ test('shared workflow, auth, conflicts, invalid input and persistence',async()=>
     result=await call('state');assert.deepEqual(result.state.proposals[0],accepted);assert.equal(result.state.players[0].name,'Nytt namn');
   }finally{await new Promise(r=>server.close(r));}
 });
+
+test('team coaches are versioned, validated, retained in accepted snapshots and exported without private fields', () => {
+  const Image = require('./team-image.js');
+  let s = Store.initial(); s.players = roster;
+  s = Store.apply(s, {type:'proposal.save', data:proposal([roster.slice(0,7),roster.slice(7)])}, 'local', 'plan');
+  assert.deepEqual(s.proposals[0].teamCoaches, ['', '']);
+  s = Store.apply(s, {type:'proposal.vote', data:{id:'plan',revision:1,choice:'approve',comment:''}}, 'local');
+  const staff = {id:'plan',revision:1,teamCoaches:[' Håkan och Anna ', 'Johan']};
+  assert.throws(()=>Store.apply(s,{type:'proposal.staff',data:{...staff,teamCoaches:['x']}},'local'));
+  assert.throws(()=>Store.apply(s,{type:'proposal.staff',data:{...staff,teamCoaches:['x'.repeat(201),'']}},'local'));
+  s = Store.apply(s,{type:'proposal.staff',data:staff},'local');
+  assert.equal(s.proposals[0].revision,2); assert.deepEqual(s.proposals[0].votes,{});
+  assert.deepEqual(s.proposals[0].teamCoaches,['Håkan och Anna','Johan']);
+  assert.throws(()=>Store.apply(s,{type:'proposal.staff',data:staff},'local'));
+  s = Store.apply(s,{type:'proposal.vote',data:{id:'plan',revision:2,choice:'approve',comment:''}},'local');
+  s = Store.apply(s,{type:'proposal.accept',data:{id:'plan',revision:2}},'local');
+  assert.throws(()=>Store.apply(s,{type:'proposal.staff',data:{...staff,revision:2}},'local'));
+  const output = Image.publicData(s.proposals[0]);
+  assert.deepEqual(Object.keys(output).sort(),['date','subtitle','teams','title']);
+  assert.equal(output.subtitle,'Lagindelning');
+  assert.deepEqual(Object.keys(output.teams[0]).sort(),['coaches','name','players']);
+  assert.equal(output.teams.flatMap(t=>t.players).length,roster.length);
+  assert(output.teams.every(t=>t.players.every(p=>typeof p==='string')));
+  assert.deepEqual(output.teams[0].players,[...output.teams[0].players].sort((a,b)=>a.localeCompare(b,'sv')));
+});

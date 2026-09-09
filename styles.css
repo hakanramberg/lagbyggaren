@@ -24,3 +24,5 @@
   #reviewdetail .teams { grid-auto-columns: minmax(0, 1fr); overflow: visible; }
   .compare-hint { display: none !important; }
 }
+
+.teamstaff:has(label),.teamstaff:has(p){padding:0 14px 12px}.teamstaff p{font-size:12px;white-space:pre-wrap}.teamstaff label{margin-top:12px}@media print{.teamstaff input{border:0}}

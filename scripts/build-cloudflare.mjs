@@ -4,7 +4,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const out = path.join(root, '.worker-assets');
 fs.mkdirSync(out, { recursive: true });
 // Explicit allowlist: never publish source files, local data, credentials or test fixtures.
-for (const file of ['index.html', 'styles.css', 'app.js', 'engine.js', 'store.js', 'logo.png']) fs.copyFileSync(path.join(root, file), path.join(out, file));
+for (const file of ['index.html', 'styles.css', 'app.js', 'team-image.js', 'engine.js', 'store.js', 'logo.png']) fs.copyFileSync(path.join(root, file), path.join(out, file));
 fs.writeFileSync(path.join(out, '_headers'), `/*
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
