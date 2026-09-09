@@ -80,7 +80,7 @@ test('team coaches are versioned, validated, retained in accepted snapshots and 
   s = Store.apply(s, {type:'proposal.save', data:proposal([roster.slice(0,7),roster.slice(7)])}, 'local', 'plan');
   assert.deepEqual(s.proposals[0].teamCoaches, ['', '']);
   s = Store.apply(s, {type:'proposal.vote', data:{id:'plan',revision:1,choice:'approve',comment:''}}, 'local');
-  const staff = {id:'plan',revision:1,teamCoaches:[' Håkan och Anna ', 'Johan']};
+  const staff = {id:'plan',revision:1,teamCoaches:[' Håkan och Anna ', 'Johan'],teamMeetings:[{time:'09:30',place:' Hall A '},{time:'10:15',place:'Hall B'}]};
   assert.throws(()=>Store.apply(s,{type:'proposal.staff',data:{...staff,teamCoaches:['x']}},'local'));
   assert.throws(()=>Store.apply(s,{type:'proposal.staff',data:{...staff,teamCoaches:['x'.repeat(201),'']}},'local'));
   s = Store.apply(s,{type:'proposal.staff',data:staff},'local');
@@ -93,7 +93,10 @@ test('team coaches are versioned, validated, retained in accepted snapshots and 
   const output = Image.publicData(s.proposals[0]);
   assert.deepEqual(Object.keys(output).sort(),['date','subtitle','teams','title']);
   assert.equal(output.subtitle,'Lagindelning');
-  assert.deepEqual(Object.keys(output.teams[0]).sort(),['coaches','name','players']);
+  assert.deepEqual(output.teams[0].meeting,{time:'09:30',place:'Hall A'});
+  assert.throws(()=>Store.proposalData({...proposal([roster]),teamMeetings:[{time:'25:99',place:'X'}]}));
+  assert.throws(()=>Store.proposalData({...proposal([roster]),teamMeetings:[{time:'09:30',place:'x'.repeat(201)}]}));
+  assert.deepEqual(Object.keys(output.teams[0]).sort(),['coaches','meeting','name','players']);
   assert.equal(output.teams.flatMap(t=>t.players).length,roster.length);
   assert(output.teams.every(t=>t.players.every(p=>typeof p==='string')));
   assert.deepEqual(output.teams[0].players,[...output.teams[0].players].sort((a,b)=>a.localeCompare(b,'sv')));

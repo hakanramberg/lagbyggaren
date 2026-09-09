@@ -39,3 +39,5 @@ Algoritmen är heuristisk: full positionstäckning, exakt målnivå och nya lagk
 I granskningen anges ett eller flera tränarnamn vid varje lag. Spara tränare per lag skapar en ny version och nollställer tidigare röster. Namnen följer med till accepterade lag, säkerhetskopior och återanvända utkast. Äldre förslag fungerar utan ifyllda tränarnamn.
 
 Exportera bild till föräldrar laddar ner en PNG från granskningen eller sparade lag. Bilden visar namn på tillfället, datum, lag, tränare och samtliga spelare alfabetiskt. Nivåer, snitt, positioner, avbytarindelning och tränarnas röster ingår inte. Bilden ritas lokalt i webbläsaren från ett separat underlag med endast avsedda uppgifter.
+
+Samlingstid och plats kan också anges separat för varje lag i granskningen. Spara laguppgifter sparar tränare, samlingstid och plats tillsammans. Uppgifterna följer med till sparade lag, säkerhetskopior och föräldrabilden. Tomma samlingsuppgifter utelämnas i bilden.

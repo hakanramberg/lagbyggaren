@@ -18,6 +18,11 @@
     check(Array.isArray(names) && names.length === count && names.every(n => typeof n === 'string' && n.length <= 200), 'Ange tränare för varje lag, högst 200 tecken per lag.');
     return names.map(n => n.trim());
   }
+  function validateMeetings(value, count) {
+    const meetings = value === undefined ? Array.from({length: count}, () => ({time: '', place: ''})) : value;
+    check(Array.isArray(meetings) && meetings.length === count && meetings.every(m => m && typeof m.time === 'string' && (m.time === '' || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(m.time)) && typeof m.place === 'string' && m.place.length <= 200), 'Ange giltig samlingstid och en plats med högst 200 tecken för varje lag.');
+    return meetings.map(m => ({time: m.time, place: m.place.trim()}));
+  }
   function proposalData(data) {
     check(data && text(data.name, 80), 'Ge tillfället ett namn, till exempel Vikingaspelen 2026.');
     check(['Träning', 'Match', 'Turnering'].includes(data.kind), 'Välj typ av tillfälle.');
@@ -27,7 +32,7 @@
     check(Array.isArray(data.slots) && [5, 7].includes(data.slots.length) && data.slots[0] === 'MV' && data.slots.slice(1).every(s => s !== 'MV' && Object.hasOwn(POSITIONS, s)), 'Ogiltig uppställning.');
     check(['balanced', 'tiered'].includes(data.mode), 'Ogiltig lagfördelning.');
     check(Array.isArray(data.targets) && (data.mode === 'balanced' || (data.targets.length === data.teams.length && data.targets.every(x => levels.includes(x)))), 'Ogiltiga målnivåer.');
-    return { name: data.name.trim(), kind: data.kind, date: data.date, teams: data.teams.map(validatePlayers), teamCoaches: validateTeamCoaches(data.teamCoaches, data.teams.length), slots: [...data.slots], mode: data.mode, targets: [...data.targets], variation: !!data.variation };
+    return { name: data.name.trim(), kind: data.kind, date: data.date, teams: data.teams.map(validatePlayers), teamCoaches: validateTeamCoaches(data.teamCoaches, data.teams.length), teamMeetings: validateMeetings(data.teamMeetings, data.teams.length), slots: [...data.slots], mode: data.mode, targets: [...data.targets], variation: !!data.variation };
   }
   function apply(state, action, actor, id, now = new Date().toISOString()) {
     check(state.coaches.some(c => c.id === actor), 'Tränaren saknar åtkomst.');
@@ -60,9 +65,10 @@
         const p = find();
         check(p.status === 'review' && d.revision === p.revision, 'Förslaget har ändrats eller är accepterat. Öppna senaste versionen.');
         const names = validateTeamCoaches(d.teamCoaches, p.teams.length);
-        check(JSON.stringify(names) !== JSON.stringify(p.teamCoaches || Array(p.teams.length).fill('')), 'Inga tränare har ändrats.');
+        const meetings = validateMeetings(d.teamMeetings === undefined ? p.teamMeetings : d.teamMeetings, p.teams.length);
+        check(JSON.stringify(names) !== JSON.stringify(p.teamCoaches || Array(p.teams.length).fill('')) || JSON.stringify(meetings) !== JSON.stringify(validateMeetings(p.teamMeetings, p.teams.length)), 'Inga laguppgifter har ändrats.');
         p.previous.push({ revision: p.revision, votes: p.votes, updatedAt: p.updatedAt });
-        p.teamCoaches = names; p.revision++; p.votes = {}; p.updatedAt = now;
+        p.teamCoaches = names; p.teamMeetings = meetings; p.revision++; p.votes = {}; p.updatedAt = now;
         break;
       }
       case 'proposal.vote': {
