@@ -40,4 +40,7 @@ I granskningen anges ett eller flera tränarnamn vid varje lag. Spara tränare p
 
 Exportera bild till föräldrar laddar ner en PNG från granskningen eller sparade lag. Bilden visar namn på tillfället, datum, lag, tränare och samtliga spelare alfabetiskt. Nivåer, snitt, positioner, avbytarindelning och tränarnas röster ingår inte. Bilden ritas lokalt i webbläsaren från ett separat underlag med endast avsedda uppgifter.
 
-Samlingstid och plats kan också anges separat för varje lag i granskningen. Spara laguppgifter sparar tränare, samlingstid och plats tillsammans. Uppgifterna följer med till sparade lag, säkerhetskopior och föräldrabilden. Tomma samlingsuppgifter utelämnas i bilden.
+Samlingstid och plats kan också anges separat för varje lag i granskningen. Spara laguppgifter sparar tränare, samlingstid och plats tillsammans. Uppgifterna följer med till sparade lag, säkerhetskopior och föräldrabilden. Tomma samlingsuppgifter markeras som ej angivna i bilden.
+
+Föräldrabilden visar HK Ankarets logga samt tränare, samlingstid och plats under respektive lag. Ej ifyllda uppgifter markeras som ej angivna.
+

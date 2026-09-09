@@ -14,7 +14,7 @@
       }))
     };
   }
-  function canvas(data) {
+  function canvas(data, logo) {
     const image = document.createElement('canvas'), ctx = image.getContext('2d');
     if (!ctx) throw new Error('Webbläsaren saknar stöd för bildexport.');
     const margin = 48, gap = 24, column = 500, inside = column - 48;
@@ -34,10 +34,10 @@
       return lines;
     };
     const title = wrap(data.title, width - margin * 2, 42, 700);
-    const start = 138 + title.length * 52;
+    const start = 218 + title.length * 52;
     const layouts = data.teams.map(team => ({ ...team,
       coachLines: wrap(team.coaches || 'Ej angivet', inside, 24, 700),
-      meetingLines: wrap([team.meeting.time ? 'Samling: ' + team.meeting.time : '', team.meeting.place ? 'Plats: ' + team.meeting.place : ''].filter(Boolean).join(' · '), inside, 23),
+      meetingLines: [...wrap('Samlingstid: ' + (team.meeting.time || 'Ej angiven'), inside, 23), ...wrap('Plats: ' + (team.meeting.place || 'Ej angiven'), inside, 23)],
       playerLines: team.players.map(name => wrap(name, inside, 26))
     }));
     const coachHeight = Math.max(...layouts.map(t => t.coachLines.length)) * 32 + 68;
@@ -51,9 +51,13 @@
       font(size, weight); ctx.fillStyle = color;
       lines.forEach((line, i) => ctx.fillText(line, x, y + i * step));
     };
-    text(['HK ANKARET'], margin, 46, 22, 700, '#b50010', 28);
-    text(title, margin, 84, 42, 700, '#151515', 52);
-    text([data.subtitle + (data.date ? ' · ' + data.date : '')], margin, 96 + title.length * 52, 22, 400, '#676a72', 28);
+    if (logo) {
+      const size = 104, scale = Math.min(size / logo.naturalWidth, size / logo.naturalHeight);
+      ctx.drawImage(logo, margin, 34, logo.naturalWidth * scale, logo.naturalHeight * scale);
+    }
+    text(['HK ANKARET'], margin + 124, 72, 22, 700, '#b50010', 28);
+    text(title, margin, 164, 42, 700, '#151515', 52);
+    text([data.subtitle + (data.date ? ' · ' + data.date : '')], margin, 176 + title.length * 52, 22, 400, '#676a72', 28);
     layouts.forEach((team, i) => {
       const x = margin + i * (column + gap);
       ctx.fillStyle = '#ffffff'; ctx.fillRect(x, start, column, cardHeight);
@@ -73,7 +77,15 @@
     return image;
   }
   async function download(proposal) {
-    const image = canvas(publicData(proposal));
+    const logo = new Image();
+    const loaded = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Loggan kunde inte laddas. Försök igen.')), 10000);
+      logo.onload = () => { clearTimeout(timeout); resolve(); };
+      logo.onerror = () => { clearTimeout(timeout); reject(new Error('Loggan kunde inte laddas. Försök igen.')); };
+    });
+    logo.src = new URL('logo.png', document.baseURI).href;
+    await loaded;
+    const image = canvas(publicData(proposal), logo);
     const blob = await new Promise(resolve => image.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('Försök igen i en annan webbläsare.');
     const url = URL.createObjectURL(blob), a = document.createElement('a');
