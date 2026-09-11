@@ -101,3 +101,19 @@ test('team coaches are versioned, validated, retained in accepted snapshots and 
   assert(output.teams.every(t=>t.players.every(p=>typeof p==='string')));
   assert.deepEqual(output.teams[0].players,[...output.teams[0].players].sort((a,b)=>a.localeCompare(b,'sv')));
 });
+
+
+test('5+1 generates, saves and accepts teams with six on-court slots', () => {
+  const fiveSlots = ['MV','V6','V9','H9','H6','M6'];
+  const players = Array.from({length:18}, (_,i)=>({id:'five'+i,name:'Spelare '+i,first:fiveSlots[i%6],second:'',level:2}));
+  const teams = Engine.build(players,3,fiveSlots,'balanced',[],[],false,rng());
+  assert.equal(new Set(teams.flat().map(p=>p.id)).size,18);
+  for (const team of teams) { assert.equal(team.length,6); assert.equal(Engine.assign(team,fiveSlots).cost,0); }
+  let s=Store.initial(); s.players=players;
+  s=Store.apply(s,{type:'proposal.save',data:{...proposal(teams),slots:fiveSlots}},'local','five');
+  s=Store.apply(s,{type:'proposal.vote',data:{id:'five',revision:1,choice:'approve',comment:''}},'local');
+  s=Store.apply(s,{type:'proposal.accept',data:{id:'five',revision:1}},'local');
+  assert.deepEqual(s.proposals[0].slots,fiveSlots);
+  assert.equal(s.proposals[0].status,'accepted');
+  assert.deepEqual(Store.proposalData(s.proposals[0]).slots,fiveSlots);
+});

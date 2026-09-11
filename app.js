@@ -95,7 +95,7 @@ $('#search').oninput = renderPlayers;
 $('#all').onclick = () => { selected = new Set(state.players.map(p => p.id)); renderPlayers(); invalidate(); };
 $('#none').onclick = () => { selected.clear(); renderPlayers(); invalidate(); };
 function slotsRender(values) {
-  const slots = values || ($('#format').value === '6' ? ['V6', 'V9', 'M9', 'H9', 'H6', 'M6'] : ['V6', 'M9', 'H6', 'M6']);
+  const slots = values || ($('#format').value === '6' ? ['V6', 'V9', 'M9', 'H9', 'H6', 'M6'] : $('#format').value === '5' ? ['V6', 'V9', 'H9', 'H6', 'M6'] : ['V6', 'M9', 'H6', 'M6']);
   $('#slots').innerHTML = slots.map((s, i) => `<label>Plats ${i + 1}<select class="slot">${options()}</select></label>`).join('');
   document.querySelectorAll('.slot').forEach((el, i) => { el.querySelector('[value="MV"]').remove(); el.value = slots[i]; el.onchange = invalidate; });
 }

@@ -29,7 +29,7 @@
     check(typeof data.date === 'string' && (!data.date || /^\d{4}-\d{2}-\d{2}$/.test(data.date)), 'Ogiltigt datum.');
     check(Array.isArray(data.teams) && data.teams.length >= 1 && data.teams.length <= 3 && data.teams.every(t => Array.isArray(t) && t.length), 'Varje lag behöver minst en spelare.');
     validatePlayers(data.teams.flat());
-    check(Array.isArray(data.slots) && [5, 7].includes(data.slots.length) && data.slots[0] === 'MV' && data.slots.slice(1).every(s => s !== 'MV' && Object.hasOwn(POSITIONS, s)), 'Ogiltig uppställning.');
+    check(Array.isArray(data.slots) && [5, 6, 7].includes(data.slots.length) && data.slots[0] === 'MV' && data.slots.slice(1).every(s => s !== 'MV' && Object.hasOwn(POSITIONS, s)), 'Ogiltig uppställning.');
     check(['balanced', 'tiered'].includes(data.mode), 'Ogiltig lagfördelning.');
     check(Array.isArray(data.targets) && (data.mode === 'balanced' || (data.targets.length === data.teams.length && data.targets.every(x => levels.includes(x)))), 'Ogiltiga målnivåer.');
     return { name: data.name.trim(), kind: data.kind, date: data.date, teams: data.teams.map(validatePlayers), teamCoaches: validateTeamCoaches(data.teamCoaches, data.teams.length), teamMeetings: validateMeetings(data.teamMeetings, data.teams.length), slots: [...data.slots], mode: data.mode, targets: [...data.targets], variation: !!data.variation };
